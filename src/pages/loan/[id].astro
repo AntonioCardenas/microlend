@@ -1,0 +1,24 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import LoanDetailView from '../../components/LoanDetailView';
+import { INITIAL_LOANS } from '../../lib/loansData';
+
+export function getStaticPaths() {
+  return INITIAL_LOANS.map(loan => ({
+    params: { id: loan.id },
+    props: { loan }
+  }));
+}
+
+const { id } = Astro.params;
+const { loan } = Astro.props;
+---
+
+<Layout 
+  title={`${loan.title} — LendingChain`}
+  description={`Support ${loan.borrowerName} with a 0% interest micro-loan on Solana. ${loan.summary}`}
+>
+  <div class="py-4">
+    <LoanDetailView client:load initialLoanId={id!} />
+  </div>
+</Layout>

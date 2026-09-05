@@ -1,0 +1,144 @@
+---
+import Layout from '../layouts/Layout.astro';
+import LoanDirectory from '../components/LoanDirectory';
+import TransactionFeed from '../components/TransactionFeed';
+---
+
+<Layout title="LendingChain — Transparent Micro-Lending on Solana">
+  
+  <div class="space-y-16">
+    
+    <!-- Hero Section -->
+    <header class="pt-6 sm:pt-10 pb-4 text-center space-y-5 sm:space-y-6">
+      
+      <!-- Main Headline (Solid typography, no gradients, no emojis, no kickers) -->
+      <div class="max-w-4xl mx-auto space-y-3 sm:space-y-4">
+        <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight font-['Syne']">
+          Lend with Dignity.<br />
+          <span class="text-slate-200">Fund with Solana.</span>
+        </h1>
+        <p class="text-sm sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed px-2 sm:px-0">
+          Direct, zero-interest micro-loans connecting global lenders with grassroots entrepreneurs in emerging economies. Every disbursement and repayment is cryptographically verified on-chain.
+        </p>
+      </div>
+
+      <!-- Hero Actions (Mobile-first stacked on small screens, full-width touch targets) -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 pt-2 max-w-xs sm:max-w-none mx-auto">
+        <a 
+          href="#explore-loans"
+          class="w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center space-x-2 cursor-pointer min-h-[44px]"
+        >
+          <span>Fund a Micro-Loan</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
+            <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/>
+          </svg>
+        </a>
+        <a 
+          href="/how-it-works"
+          class="w-full sm:w-auto px-6 py-3.5 sm:py-3 rounded-xl bg-[#0e1526] hover:bg-slate-800 text-slate-200 border border-slate-800 text-sm font-semibold transition-all flex items-center justify-center space-x-2 cursor-pointer min-h-[44px]"
+        >
+          <span>Why Solana for Giving?</span>
+        </a>
+      </div>
+
+      <!-- Platform Stat Highlights (Mobile 2x2 grid with tight padding) -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 max-w-5xl mx-auto pt-6 sm:pt-8">
+        
+        <div class="p-3.5 sm:p-4 rounded-xl bg-[#0e1526] border border-slate-800 text-left">
+          <span class="text-[10px] sm:text-[11px] uppercase tracking-wider text-slate-400 font-semibold block truncate">Total Micro-Capital</span>
+          <span class="text-xl sm:text-2xl font-bold text-white font-mono tabular-nums mt-0.5 block">$48,250+</span>
+          <span class="text-[9px] sm:text-[10px] text-indigo-400 font-mono">100% Deployed</span>
+        </div>
+
+        <div class="p-3.5 sm:p-4 rounded-xl bg-[#0e1526] border border-slate-800 text-left">
+          <span class="text-[10px] sm:text-[11px] uppercase tracking-wider text-slate-400 font-semibold block truncate">Borrower APR</span>
+          <span class="text-xl sm:text-2xl font-bold text-white font-mono tabular-nums mt-0.5 block">0.0%</span>
+          <span class="text-[9px] sm:text-[10px] text-slate-400">Zero Predatory Cuts</span>
+        </div>
+
+        <div class="p-3.5 sm:p-4 rounded-xl bg-[#0e1526] border border-slate-800 text-left">
+          <span class="text-[10px] sm:text-[11px] uppercase tracking-wider text-slate-400 font-semibold block truncate">On-Chain Escrows</span>
+          <span class="text-xl sm:text-2xl font-bold text-white font-mono tabular-nums mt-0.5 block">100%</span>
+          <span class="text-[9px] sm:text-[10px] text-slate-400 font-mono">Solana Devnet</span>
+        </div>
+
+        <div class="p-3.5 sm:p-4 rounded-xl bg-[#0e1526] border border-slate-800 text-left">
+          <span class="text-[10px] sm:text-[11px] uppercase tracking-wider text-slate-400 font-semibold block truncate">Fee Per Loan</span>
+          <span class="text-xl sm:text-2xl font-bold text-white font-mono tabular-nums mt-0.5 block">&lt;$0.001</span>
+          <span class="text-[9px] sm:text-[10px] text-slate-400">Zero Platform Cuts</span>
+        </div>
+
+      </div>
+
+    </header>
+
+    <!-- Structural Foundations Grid -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      
+      <div class="p-6 rounded-2xl bg-[#0e1526] border border-slate-800 space-y-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-700/50 flex items-center justify-center text-indigo-400">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+            <path d="M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h36.69L179.8,63.1A80,80,0,1,0,192,160a8,8,0,0,1,16,0,96,96,0,1,1-16.71-54.63L216,80V48a8,8,0,0,1,16,0Z"/>
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-white font-['Syne']">The Generosity Multiplier</h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Unlike terminal donations where capital ends after spending, micro-loans are repaid by entrepreneurs. The repaid funds return to your wallet to be re-lent again and again, creating an endless cycle of empowerment.
+        </p>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-[#0e1526] border border-slate-800 space-y-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-950 border border-blue-700/50 flex items-center justify-center text-blue-400">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+            <path d="M215.79,118.17a8,8,0,0,0-7.79-6.17H144V40a8,8,0,0,0-13.66-5.66l-96,96a8,8,0,0,0,5.66,13.66H112v72a8,8,0,0,0,13.66,5.66l96-96A8,8,0,0,0,215.79,118.17Z"/>
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-white font-['Syne']">Sub-Cent Fees Enable $5 Loans</h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Traditional international remittance or credit cards take $0.30 + 3% to 7% per transaction, making small $5 or $10 micro-loans impossible. On Solana, transactions cost $0.0007, making micro-giving frictionless.
+        </p>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-[#0e1526] border border-slate-800 space-y-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-700/50 flex items-center justify-center text-indigo-400">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+            <path d="M208,40H48A16,16,0,0,0,32,56v58.78c0,89.61,75.82,119.34,91.25,124.39a15.53,15.53,0,0,0,9.5,0c15.43-5.05,91.25-34.78,91.25-124.39V56A16,16,0,0,0,208,40Zm0,74.79c0,78.42-66.35,105.44-80,109.84-13.65-4.4-80-31.42-80-109.84V56H208Z"/>
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-white font-['Syne']">Radical On-Chain Proof</h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Every loan commitment is backed by an on-chain memo and smart contract escrow. You can independently verify on the Solana Explorer exactly where your money was sent and when repayments arrived.
+        </p>
+      </div>
+
+    </section>
+
+    <!-- Main Loan Directory Section -->
+    <section id="explore-loans" class="space-y-6 scroll-mt-24">
+      <div class="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-2xl font-bold text-white tracking-tight font-['Syne']">
+            Grassroots Initiatives
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Choose an entrepreneur whose vision resonates with you and fund their project with Solana.
+          </p>
+        </div>
+        <div class="flex items-center space-x-2 text-xs text-indigo-400 font-mono">
+          <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+          <span>6 Active Loan Escrows</span>
+        </div>
+      </div>
+
+      <!-- React Island: Loan Directory -->
+      <LoanDirectory client:load />
+    </section>
+
+    <!-- Live Activity Feed -->
+    <section class="max-w-4xl mx-auto pt-6">
+      <TransactionFeed client:load />
+    </section>
+
+  </div>
+
+</Layout>

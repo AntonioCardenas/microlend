@@ -1,0 +1,13 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ExplorerView from '../components/ExplorerView';
+---
+
+<Layout 
+  title="Solana Transparency Ledger — LendingChain"
+  description="Every micro-loan transaction, borrower escrow disbursement, and SPL Memo verified on Solana Devnet."
+>
+  <div class="py-4">
+    <ExplorerView client:load />
+  </div>
+</Layout>

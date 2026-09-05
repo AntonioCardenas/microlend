@@ -1,0 +1,13 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PortfolioView from '../components/PortfolioView';
+---
+
+<Layout 
+  title="My Impact Portfolio — LendingChain"
+  description="Track your deployed micro-loans, on-chain repayments, NFT impact badges, and re-lend recovered funds."
+>
+  <div class="py-4">
+    <PortfolioView client:load />
+  </div>
+</Layout>

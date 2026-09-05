@@ -1,0 +1,176 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+  title="How Micro-Lending on Solana Works — LendingChain"
+  description="Learn how Solana smart contracts enable zero-interest micro-loans with instant settlement and radical transparency."
+>
+  <div class="max-w-4xl mx-auto space-y-16 py-4">
+    
+    <!-- Hero Banner -->
+    <header class="text-center space-y-4">
+      <h1 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight font-['Syne']">
+        Why Solana Solves the <br />
+        <span class="text-slate-200">Micro-Finance Dilemma</span>
+      </h1>
+      <p class="text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
+        Traditional microcredit institutions often charge impoverished borrowers 20% to 45% APR to offset international banking fees and administrative bloat. LendingChain eliminates this overhead through direct on-chain escrows.
+      </p>
+    </header>
+
+    <!-- Comparison: Traditional vs LendingChain -->
+    <section class="rounded-2xl bg-[#0e1526] border border-slate-800 p-6 sm:p-8 space-y-6">
+      <h2 class="text-xl font-bold text-white flex items-center space-x-2 font-['Syne']">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 256 256" class="text-indigo-400">
+          <path d="M232,168a40,40,0,0,1-73.44,22.25l-22.69-37.81a8,8,0,0,1,13.72-8.23l22.68,37.8A24,24,0,1,0,208,152a24.26,24.26,0,0,0-5.74.69,8,8,0,0,1-3.69-15.57A40.1,40.1,0,0,1,232,168ZM87.87,144.15a8,8,0,0,0-13.72,8.23l22.69,37.81A40,40,0,1,0,128,168a40.1,40.1,0,0,0-24.57-31.12,8,8,0,0,0-3.69,15.57A24.26,24.26,0,0,1,88,152,24,24,0,1,0,111.45,182L87.87,144.15Z"/>
+        </svg>
+        <span>The Structural Difference</span>
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        {/* Traditional */}
+        <div class="p-5 rounded-xl bg-[#090e1a] border border-red-500/20 space-y-3">
+          <div class="text-red-400 font-bold text-sm font-['Syne']">
+            Traditional Non-Profit / Micro-Lenders
+          </div>
+          <ul class="space-y-2.5 text-xs text-slate-300">
+            <li class="flex items-start space-x-2">
+              <span class="text-red-400 font-bold">✕</span>
+              <span><strong>Intermediary Leakage:</strong> International wire and admin cuts consume 5% to 15% of capital.</span>
+            </li>
+            <li class="flex items-start space-x-2">
+              <span class="text-red-400 font-bold">✕</span>
+              <span><strong>Slow Cross-Border Settlement:</strong> Takes days or weeks to clear correspondent banks.</span>
+            </li>
+            <li class="flex items-start space-x-2">
+              <span class="text-red-400 font-bold">✕</span>
+              <span><strong>Opaque Ledger:</strong> Donors cannot verify whether funds arrived or repayments occurred.</span>
+            </li>
+            <li class="flex items-start space-x-2">
+              <span class="text-red-400 font-bold">✕</span>
+              <span><strong>Terminal Capital:</strong> Donations are spent once and cannot be re-lent.</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* LendingChain on Solana */}
+        <div class="p-5 rounded-xl bg-[#090e1a] border border-indigo-500/30 space-y-3">
+          <div class="text-indigo-400 font-bold text-sm font-['Syne']">
+            LendingChain on Solana
+          </div>
+          <ul class="space-y-2.5 text-xs text-slate-300">
+            <li class="flex items-start space-x-2">
+              <span class="text-indigo-400 font-bold">✓</span>
+              <span><strong>0% Interest Micro-Loans:</strong> Zero predatory interest for borrowers; 100% of capital reaches the project.</span>
+            </li>
+            <li class="flex items-start space-x-2">
+              <span class="text-indigo-400 font-bold">✓</span>
+              <span><strong>Sub-Second Finality:</strong> Funds settle in under 400 milliseconds across borders.</span>
+            </li>
+            <li class="flex items-start space-x-2">
+              <span class="text-indigo-400 font-bold">✓</span>
+              <span><strong>Cryptographic Verification:</strong> Every escrow and memo is queryable on Solana Explorer.</span>
+            </li>
+            <li class="flex items-start space-x-2">
+              <span class="text-indigo-400 font-bold">✓</span>
+              <span><strong>The Generosity Multiplier:</strong> Repaid capital returns to the lender and cycles forward indefinitely.</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- The 5-Step Lifecycle of a Loan -->
+    <section class="space-y-6">
+      <div class="space-y-1">
+        <h2 class="text-2xl font-bold text-white font-['Syne']">Lifecycle of a Solana Micro-Loan</h2>
+        <p class="text-xs text-slate-400">From initial funding to repayment and re-investment</p>
+      </div>
+
+      <div class="space-y-3">
+        
+        <div class="p-5 rounded-xl bg-[#0e1526] border border-slate-800 flex items-start space-x-4">
+          <div class="w-8 h-8 rounded-lg bg-[#090e1a] border border-[#172554] flex items-center justify-center text-indigo-400 font-bold text-xs font-mono flex-shrink-0">
+            01
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-sm font-bold text-white font-['Syne']">Choose a Vetted Grassroots Cause</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Browse micro-loan requests created by female farming cooperatives, clean energy entrepreneurs, and tech education labs across the Global South.
+            </p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-xl bg-[#0e1526] border border-slate-800 flex items-start space-x-4">
+          <div class="w-8 h-8 rounded-lg bg-[#090e1a] border border-[#172554] flex items-center justify-center text-indigo-400 font-bold text-xs font-mono flex-shrink-0">
+            02
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-sm font-bold text-white font-['Syne']">Fund with SOL & Encode Your On-Chain Memo</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Connect your Phantom or Devnet demo wallet. When you confirm your loan, a Solana transfer sends SOL directly to the project's dedicated escrow address, while an SPL Memo records your encouragement note permanently on-chain.
+            </p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-xl bg-[#0e1526] border border-slate-800 flex items-start space-x-4">
+          <div class="w-8 h-8 rounded-lg bg-[#090e1a] border border-[#172554] flex items-center justify-center text-indigo-400 font-bold text-xs font-mono flex-shrink-0">
+            03
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-sm font-bold text-white font-['Syne']">Borrower Receives Capital & Scales Enterprise</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Upon reaching 100% funding, the project status unlocks. The borrower purchases solar panels, upright looms, or raspberry pi workstations to scale their business and generate revenue.
+            </p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-xl bg-[#0e1526] border border-slate-800 flex items-start space-x-4">
+          <div class="w-8 h-8 rounded-lg bg-[#090e1a] border border-[#172554] flex items-center justify-center text-indigo-400 font-bold text-xs font-mono flex-shrink-0">
+            04
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-sm font-bold text-white font-['Syne']">Zero-Interest Repayments Return to Your Portfolio</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Borrowers make scheduled repayments as agreed. There are zero penalties, zero compounding interest, and zero hidden charges.
+            </p>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-xl bg-[#0e1526] border border-indigo-500/30 flex items-start space-x-4">
+          <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs font-mono flex-shrink-0">
+            05
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-sm font-bold text-white font-['Syne']">Re-Lend & Earn Verified Impact Badges</h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              When funds are returned, they appear in your "Available to Re-Lend" balance. You can deploy the same capital into another initiative with one click, leveling up your Lender Impact Badges from Seedling to Global Sovereign Patron.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Call to action -->
+    <div class="p-8 rounded-2xl bg-[#0e1526] border border-slate-800 text-center space-y-4">
+      <h3 class="text-xl font-bold text-white font-['Syne']">Ready to Put Generosity in Motion?</h3>
+      <p class="text-xs text-slate-400 max-w-md mx-auto">
+        Join lenders from across the globe in celebrating the UN International Day of Charity with Solana.
+      </p>
+      <a
+        href="/#explore-loans"
+        class="inline-flex items-center space-x-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer"
+      >
+        <span>Explore Initiatives</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256">
+          <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/>
+        </svg>
+      </a>
+    </div>
+
+  </div>
+</Layout>
