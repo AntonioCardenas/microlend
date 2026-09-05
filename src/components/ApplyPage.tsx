@@ -9,8 +9,10 @@ import {
   HandHeart, Lightning, Wallet, ArrowRight, ArrowLeft, CheckCircle,
   MapPin, Sparkle, CircleNotch, ShieldCheck, WarningCircle, PlusCircle,
   Globe, Users, Leaf, PaperPlaneTilt, ArrowSquareOut, X,
-  Plant, Sun, Storefront, UsersThree, GraduationCap,
+  Plant, Sun, Storefront, UsersThree, GraduationCap, ShieldWarning
 } from '@phosphor-icons/react';
+import { auditLoanWithGemini } from '../lib/geminiAudit';
+import type { LoanAIAudit } from '../lib/types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -327,7 +329,7 @@ function Step4({ f, set, walletAddr }: { f: FormData; set: (k: keyof FormData, v
 
 // ─── Success screen ───────────────────────────────────────────────────────────
 
-function SuccessScreen({ f, walletAddr }: { f: FormData; walletAddr: string }) {
+function SuccessScreen({ f, walletAddr, audit }: { f: FormData; walletAddr: string; audit?: LoanAIAudit | null }) {
   const ref     = `LC-${Date.now().toString(36).toUpperCase().slice(-8)}`;
   const goalSOL = (f.goalUSD / SOL_RATE).toFixed(2);
   return (
@@ -336,12 +338,60 @@ function SuccessScreen({ f, walletAddr }: { f: FormData; walletAddr: string }) {
         <CheckCircle size={44} weight="bold" className="text-emerald-400" />
       </div>
       <div>
-        <div className="text-[11px] uppercase tracking-widest text-emerald-400 font-bold mb-2">Application Submitted</div>
+        <div className="text-[11px] uppercase tracking-widest text-emerald-400 font-bold mb-2">Application Submitted & Audited</div>
         <h2 className="text-2xl font-extrabold text-white font-['Syne'] mb-2">You're in the queue!</h2>
         <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">
-          Your micro-loan application for <strong className="text-white">{f.title || 'your project'}</strong> has been received.
+          Your micro-loan application for <strong className="text-white">{f.title || 'your project'}</strong> has been received and verified.
         </p>
       </div>
+
+      {/* Real-time Gemini Audit Summary Card */}
+      {audit && (
+        <div className="w-full p-4 rounded-2xl bg-[#090e1a] border border-[#172554] text-left space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Sparkle size={16} weight="fill" className="text-indigo-400" />
+              <span className="text-xs font-bold text-white font-mono">Gemini Protocol Audit</span>
+            </div>
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
+              audit.riskLevel === 'LOW' 
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : audit.riskLevel === 'MODERATE'
+                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+            }`}>
+              {audit.riskLevel} RISK ({audit.riskScore}/100)
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-300 leading-relaxed">
+            {audit.summary}
+          </p>
+
+          <div className="pt-2 border-t border-slate-800 flex flex-wrap gap-2 text-[11px] font-mono text-slate-400">
+            <span>Wallet status: {audit.walletAudit.isNewWallet ? '⚠️ Fresh Wallet' : '✓ Established'}</span>
+            <span>·</span>
+            <span>Balance: {audit.walletAudit.solBalance} SOL</span>
+            <span>·</span>
+            <span>{audit.walletAudit.transactionCount} on-chain txs</span>
+          </div>
+
+          {audit.walletAudit.irregularitiesDetected.length > 0 && (
+            <div className="p-2.5 rounded-lg bg-amber-950/20 border border-amber-500/20 text-[11px] text-amber-300 space-y-1">
+              <div className="font-bold flex items-center gap-1">
+                <WarningCircle size={13} />
+                <span>Anomalies Flagged for Review:</span>
+              </div>
+              <ul className="list-disc list-inside space-y-0.5 pl-1">
+                {audit.walletAudit.irregularitiesDetected.map((item, idx) => (
+                  <li key={idx}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="w-full p-5 rounded-2xl bg-[#090e1a] border border-[#172554] text-xs text-left space-y-3">
         <p className="text-[10px] uppercase tracking-wider font-bold text-indigo-400">Application Details</p>
         {[
@@ -360,7 +410,7 @@ function SuccessScreen({ f, walletAddr }: { f: FormData; walletAddr: string }) {
       </div>
       <div className="w-full p-4 rounded-xl bg-indigo-950/30 border border-indigo-700/30 text-xs text-indigo-200 leading-relaxed text-left flex gap-3">
         <PaperPlaneTilt size={16} className="text-indigo-400 flex-shrink-0 mt-0.5" />
-        <span>Our team will review within <strong>3–5 business days</strong>. Once approved, your listing goes live and lenders can start funding immediately.</span>
+        <span>Our smart contract escrow allocates incoming micro-funds straight to your wallet. Lenders review this audit prior to funding.</span>
       </div>
       <a href="/" className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer">
         ← Explore Active Loans
@@ -398,6 +448,8 @@ function ApplyInner() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
+  const [auditResult, setAuditResult] = useState<LoanAIAudit | null>(null);
+
   const set = (k: keyof FormData, v: any) => setForm(p => ({ ...p, [k]: v }));
 
   // Auto-detect wallet once Privy is ready
@@ -428,7 +480,25 @@ function ApplyInner() {
     setSubmitting(true);
     setError(null);
     try {
-      await new Promise(r => setTimeout(r, 1800));
+      // Execute live on-chain wallet inspection and Gemini AI applicant audit
+      const audit = await auditLoanWithGemini({
+        borrowerName: form.fullName,
+        borrowerRole: form.role,
+        borrowerAddress: walletAddr,
+        location: {
+          city: form.city,
+          country: form.country,
+          countryCode: form.country.slice(0, 2).toUpperCase()
+        },
+        category: form.category as any,
+        title: form.title,
+        summary: form.summary,
+        story: form.story,
+        businessPlan: form.businessPlan,
+        goalUSD: form.goalUSD,
+        termsMonths: form.termsMonths
+      });
+      setAuditResult(audit);
       setSubmitted(true);
     } catch (e: any) {
       setError(e?.message ?? 'Submission failed. Please try again.');
@@ -450,7 +520,7 @@ function ApplyInner() {
     return (
       <div className="min-h-screen bg-[#080c16]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
-          <SuccessScreen f={form} walletAddr={walletAddr} />
+          <SuccessScreen f={form} walletAddr={walletAddr} audit={auditResult} />
         </div>
       </div>
     );

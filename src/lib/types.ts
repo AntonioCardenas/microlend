@@ -23,12 +23,51 @@ export interface ImpactMetric {
   iconName: string;
 }
 
+export interface WalletAuditFinding {
+  type: 'info' | 'warning' | 'danger' | 'success';
+  title: string;
+  detail: string;
+}
+
+export interface LoanAIAudit {
+  riskScore: number; // 0 to 100 (lower is safer)
+  riskLevel: 'LOW' | 'MODERATE' | 'ELEVATED' | 'HIGH';
+  summary: string;
+  borrowerAssessment: string;
+  walletAudit: {
+    address: string;
+    isNewWallet: boolean;
+    walletAgeDays?: number;
+    transactionCount: number;
+    solBalance: number;
+    irregularitiesDetected: string[];
+    findings: WalletAuditFinding[];
+  };
+  recommendation: string;
+  auditedAt: string;
+  modelUsed: string;
+}
+
+export interface ProjectUpdate {
+  id: string;
+  authorName: string;
+  authorRole: string;
+  authorAddress: string;
+  title: string;
+  content: string;
+  imageUrl?: string;
+  txHash?: string;
+  timestamp: number;
+  category: 'milestone' | 'progress' | 'equipment' | 'financial';
+}
+
 export interface LoanRequest {
   id: string;
   title: string;
   borrowerName: string;
   borrowerRole: string;
   borrowerAvatar: string;
+  borrowerAddress?: string;
   location: {
     city: string;
     country: string;
@@ -51,6 +90,8 @@ export interface LoanRequest {
   repaymentSchedule: RepaymentMilestone[];
   createdAt: string;
   featured?: boolean;
+  aiAudit?: LoanAIAudit;
+  updates?: ProjectUpdate[];
 }
 
 export interface LendTransaction {

@@ -6,9 +6,11 @@ import {
   Users, 
   Clock, 
   ArrowRight,
-  CheckCircle,
-  Check
+  CheckCircle, 
+  Check,
+  Sparkle
 } from '@phosphor-icons/react';
+import GeminiAuditModal from './GeminiAuditModal';
 
 interface LoanCardProps {
   loan: LoanRequest;
@@ -16,6 +18,7 @@ interface LoanCardProps {
 
 export default function LoanCard({ loan }: LoanCardProps) {
   const [showModal, setShowModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
   const [store, setStore] = useState(getStore());
 
   useEffect(() => {
@@ -52,7 +55,29 @@ export default function LoanCard({ loan }: LoanCardProps) {
             </span>
           </div>
 
-          <div className="absolute top-3 right-3">
+          <div className="absolute top-3 right-3 flex items-center space-x-1.5">
+            {currentLoan.aiAudit && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowAuditModal(true);
+                }}
+                title="View Gemini AI Risk & Wallet Audit"
+                className={`px-2 py-1 text-[11px] font-bold rounded flex items-center space-x-1 border font-mono transition-transform hover:scale-105 cursor-pointer backdrop-blur-md ${
+                  currentLoan.aiAudit.riskLevel === 'LOW'
+                    ? 'bg-[#080c16]/90 text-emerald-300 border-emerald-500/40'
+                    : currentLoan.aiAudit.riskLevel === 'MODERATE'
+                    ? 'bg-[#080c16]/90 text-amber-300 border-amber-500/40'
+                    : 'bg-[#080c16]/90 text-rose-300 border-rose-500/40'
+                }`}
+              >
+                <Sparkle size={12} weight="fill" className="text-indigo-400" />
+                <span>AI {currentLoan.aiAudit.riskLevel}</span>
+              </button>
+            )}
+
             <span className="px-2.5 py-1 text-xs font-medium rounded bg-[#080c16]/90 text-slate-300 border border-slate-800 font-mono">
               {loan.location.countryCode} · {loan.location.city}
             </span>
@@ -136,9 +161,14 @@ export default function LoanCard({ loan }: LoanCardProps) {
             <div className="flex items-center space-x-2">
               <a
                 href={`/loan/${currentLoan.id}`}
-                className="py-2.5 px-3 text-slate-300 hover:text-white rounded-xl hover:bg-slate-800 text-xs transition-colors font-medium min-h-[44px] flex items-center justify-center"
+                className="py-2.5 px-3 text-slate-300 hover:text-white rounded-xl hover:bg-slate-800 text-xs transition-colors font-medium min-h-[44px] flex items-center justify-center space-x-1"
               >
-                Story
+                <span>Story</span>
+                {currentLoan.updates && currentLoan.updates.length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50">
+                    {currentLoan.updates.length}
+                  </span>
+                )}
               </a>
               <button
                 onClick={() => setShowModal(true)}
@@ -171,6 +201,15 @@ export default function LoanCard({ loan }: LoanCardProps) {
         <LendModal
           loan={currentLoan}
           onClose={() => setShowModal(false)}
+        />
+      )}
+
+      {showAuditModal && currentLoan.aiAudit && (
+        <GeminiAuditModal
+          audit={currentLoan.aiAudit}
+          borrowerName={currentLoan.borrowerName}
+          loanTitle={currentLoan.title}
+          onClose={() => setShowAuditModal(false)}
         />
       )}
     </>

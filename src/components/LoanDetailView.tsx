@@ -3,7 +3,10 @@ import type { LoanRequest } from '../lib/types';
 import { getStore, subscribeStore, getUserLentToLoan } from '../lib/store';
 import { formatAddress, getSolanaExplorerUrl } from '../lib/solana';
 import { deriveLoanEscrowInfo } from '../lib/escrowProgram';
+import { auditLoanWithGemini } from '../lib/geminiAudit';
 import LendModal from './LendModal';
+import GeminiAuditModal from './GeminiAuditModal';
+import BorrowerUpdatesSection from './BorrowerUpdatesSection';
 import { 
   Users, 
   ShieldCheck, 
@@ -15,7 +18,11 @@ import {
   ArrowRight, 
   TrendUp,
   Info,
-  Check
+  Check,
+  Sparkle,
+  WarningCircle,
+  ShieldWarning,
+  CircleNotch
 } from '@phosphor-icons/react';
 
 interface LoanDetailViewProps {
@@ -24,15 +31,33 @@ interface LoanDetailViewProps {
 
 export default function LoanDetailView({ initialLoanId }: LoanDetailViewProps) {
   const [store, setStore] = useState(getStore());
+  const loan = store.loans.find(l => l.id === initialLoanId) || store.loans[0];
   const [showModal, setShowModal] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [currentAudit, setCurrentAudit] = useState(loan.aiAudit);
+  const [isAuditing, setIsAuditing] = useState(false);
 
   useEffect(() => {
-    return subscribeStore(() => {
-      setStore({ ...getStore() });
-    });
-  }, []);
+    if (loan.aiAudit) {
+      setCurrentAudit(loan.aiAudit);
+    } else {
+      // Auto-trigger audit generation in background if missing
+      handleRunAudit();
+    }
+  }, [loan.id]);
 
-  const loan = store.loans.find(l => l.id === initialLoanId) || store.loans[0];
+  const handleRunAudit = async () => {
+    setIsAuditing(true);
+    try {
+      const result = await auditLoanWithGemini(loan);
+      setCurrentAudit(result);
+    } catch (e) {
+      console.warn('Audit error:', e);
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
   const percentFunded = Math.min(100, Math.round((loan.raisedUSD / loan.goalUSD) * 100));
   const remainingUSD = Math.max(0, loan.goalUSD - loan.raisedUSD);
   const isFullyFunded = loan.raisedUSD >= loan.goalUSD;
@@ -76,13 +101,62 @@ export default function LoanDetailView({ initialLoanId }: LoanDetailViewProps) {
               </div>
             </div>
 
-            <div className="p-6 bg-[#0e1526] border-t border-slate-800">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight font-['Syne']">
-                {loan.title}
-              </h1>
-              <p className="text-sm text-slate-300 mt-2 font-medium">
-                Initiative led by <strong className="text-indigo-400">{loan.borrowerName}</strong> ({loan.borrowerRole})
-              </p>
+            <div className="p-6 bg-[#0e1526] border-t border-slate-800 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight font-['Syne']">
+                    {loan.title}
+                  </h1>
+                  <p className="text-sm text-slate-300 mt-1 font-medium">
+                    Initiative led by <strong className="text-indigo-400">{loan.borrowerName}</strong> ({loan.borrowerRole})
+                  </p>
+                </div>
+              </div>
+
+              {/* Gemini AI Borrower & Wallet Audit Summary Pill */}
+              <div className="pt-3 border-t border-slate-800/80">
+                <div className="p-3.5 rounded-xl bg-[#090e1a] border border-[#172554] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start sm:items-center space-x-3">
+                    <div className="p-2 rounded-lg bg-indigo-950/80 border border-indigo-700/60 text-indigo-400 flex-shrink-0">
+                      <Sparkle size={18} weight="fill" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs font-bold text-white font-mono">Gemini AI Borrower & Wallet Audit</span>
+                        {currentAudit ? (
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
+                            currentAudit.riskLevel === 'LOW' 
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : currentAudit.riskLevel === 'MODERATE'
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                          }`}>
+                            {currentAudit.riskLevel} RISK · {currentAudit.riskScore}/100
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 font-mono">Scanning...</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 line-clamp-1">
+                        {currentAudit 
+                          ? `${currentAudit.walletAudit.isNewWallet ? '⚠️ Fresh Wallet' : '✓ Established Wallet'} · ${currentAudit.walletAudit.transactionCount} on-chain txs · ${currentAudit.walletAudit.irregularitiesDetected.length} irregularities detected`
+                          : 'Analyzing Solana ledger activity, wallet age, and borrower proposal...'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (!currentAudit) handleRunAudit();
+                      setShowAuditModal(true);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 hover:text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center space-x-1.5 flex-shrink-0"
+                  >
+                    <Sparkle size={14} weight="bold" />
+                    <span>View Full AI Audit</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -165,6 +239,15 @@ export default function LoanDetailView({ initialLoanId }: LoanDetailViewProps) {
               ))}
             </div>
           </div>
+
+          {/* Live Borrower Field Updates & Proof Section */}
+          <BorrowerUpdatesSection
+            loanId={loan.id}
+            borrowerName={loan.borrowerName}
+            borrowerRole={loan.borrowerRole}
+            borrowerAddress={loan.borrowerAddress}
+            updates={loan.updates}
+          />
 
         </div>
 
@@ -326,6 +409,17 @@ export default function LoanDetailView({ initialLoanId }: LoanDetailViewProps) {
         <LendModal
           loan={loan}
           onClose={() => setShowModal(false)}
+        />
+      )}
+
+      {showAuditModal && currentAudit && (
+        <GeminiAuditModal
+          audit={currentAudit}
+          borrowerName={loan.borrowerName}
+          loanTitle={loan.title}
+          onClose={() => setShowAuditModal(false)}
+          onRefreshAudit={handleRunAudit}
+          isRefreshing={isAuditing}
         />
       )}
 

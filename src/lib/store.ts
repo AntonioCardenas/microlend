@@ -1,4 +1,4 @@
-import type { LoanRequest, LendTransaction, LenderBadge, UserPortfolio } from './types';
+import type { LoanRequest, LendTransaction, LenderBadge, UserPortfolio, ProjectUpdate } from './types';
 import { INITIAL_LOANS, BADGE_DEFINITIONS, INITIAL_TRANSACTIONS, SOL_USD_RATE } from './loansData';
 import { getOrCreateDemoKeypair, fetchSolBalance, formatAddress } from './solana';
 import { db } from './firebase';
@@ -438,6 +438,82 @@ export function getUserLentToLoan(loanId: string, lenderAddress?: string): { has
     totalLentUSD: totalUSD,
     totalLentSOL: totalSOL
   };
+}
+
+export async function addProjectUpdate({
+  loanId,
+  title,
+  content,
+  category = 'progress',
+  imageUrl,
+  txHash,
+  authorAddress,
+  authorName,
+  authorRole
+}: {
+  loanId: string;
+  title: string;
+  content: string;
+  category?: 'milestone' | 'progress' | 'equipment' | 'financial';
+  imageUrl?: string;
+  txHash?: string;
+  authorAddress?: string;
+  authorName?: string;
+  authorRole?: string;
+}): Promise<ProjectUpdate | null> {
+  const loanIndex = currentStore.loans.findIndex(l => l.id === loanId);
+  if (loanIndex === -1) return null;
+
+  const targetLoan = currentStore.loans[loanIndex];
+  const newUpdate: ProjectUpdate = {
+    id: `upd-${Date.now()}`,
+    authorName: authorName || targetLoan.borrowerName,
+    authorRole: authorRole || targetLoan.borrowerRole,
+    authorAddress: authorAddress || targetLoan.borrowerAddress || currentStore.wallet.address || targetLoan.escrowAddress,
+    title,
+    content,
+    timestamp: Date.now(),
+    category
+  };
+  if (imageUrl) newUpdate.imageUrl = imageUrl;
+  if (txHash) newUpdate.txHash = txHash;
+
+  const updatedUpdates = [newUpdate, ...(targetLoan.updates || [])];
+  const updatedLoan: LoanRequest = {
+    ...targetLoan,
+    updates: updatedUpdates
+  };
+
+  const updatedLoans = [...currentStore.loans];
+  updatedLoans[loanIndex] = updatedLoan;
+
+  currentStore = {
+    ...currentStore,
+    loans: updatedLoans
+  };
+
+  notifyStoreChange();
+
+  // Persist to Firebase Firestore
+  try {
+    const loanRef = doc(db, 'loans', targetLoan.id);
+    await runTransaction(db, async (transaction) => {
+      const loanDoc = await transaction.get(loanRef);
+      if (loanDoc.exists()) {
+        const existingData = loanDoc.data() as LoanRequest;
+        const currentUpdates = existingData.updates || [];
+        transaction.update(loanRef, {
+          updates: [newUpdate, ...currentUpdates]
+        });
+      } else {
+        transaction.set(loanRef, updatedLoan);
+      }
+    });
+  } catch (err) {
+    console.warn('Firestore update sync note (persisted locally):', err);
+  }
+
+  return newUpdate;
 }
 
 

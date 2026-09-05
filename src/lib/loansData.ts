@@ -32,6 +32,7 @@ const RAW_INITIAL_LOANS: LoanRequest[] = [
     lendersCount: 47,
     termsMonths: 12,
     interestRate: 0,
+    borrowerAddress: '7XwK1tPzR9x8M2cT6g4hL5vB7nJ3mK9pQ2wE4rT6yU8i',
     escrowAddress: '7XwK1tPzR9x8M2cT6g4hL5vB7nJ3mK9pQ2wE4rT6yU8i',
     status: 'funding',
     repaymentSchedule: [
@@ -41,7 +42,52 @@ const RAW_INITIAL_LOANS: LoanRequest[] = [
       { month: 4, dueDate: '2027-01-05', amountUSD: 266.6, amountSOL: 1.83, status: 'upcoming' }
     ],
     createdAt: '2026-08-20',
-    featured: true
+    featured: true,
+    aiAudit: {
+      riskScore: 12,
+      riskLevel: 'LOW',
+      summary: 'Fatima Zahra leads Al-Amal Cooperative representing 34 female farmers. Funds replace diesel rental generators with 12 solar panels and cold-press extractors.',
+      borrowerAssessment: 'High-credibility agricultural collective with multi-decade generational grove rights and existing wholesale distribution contracts.',
+      walletAudit: {
+        address: '7XwK1tPzR9x8M2cT6g4hL5vB7nJ3mK9pQ2wE4rT6yU8i',
+        isNewWallet: false,
+        walletAgeDays: 142,
+        transactionCount: 28,
+        solBalance: 1.84,
+        irregularitiesDetected: [],
+        findings: [
+          { type: 'success', title: 'Established Wallet History', detail: 'Wallet active for 142 days with consistent micro-transactions.' },
+          { type: 'success', title: 'Cooperative Multi-Sig Verification', detail: 'Address linked to verified Essaouira agricultural cooperative registry.' }
+        ]
+      },
+      recommendation: 'Exceptional transparency and community collateral. Approved for priority autonomous escrow release.',
+      auditedAt: '2026-09-05T08:30:00Z',
+      modelUsed: 'Google Gemini 1.5 Flash'
+    },
+    updates: [
+      {
+        id: 'upd-morocco-1',
+        authorName: 'Fatima Zahra',
+        authorRole: 'Cooperative President',
+        authorAddress: '7XwK1tPzR9x8M2cT6g4hL5vB7nJ3mK9pQ2wE4rT6yU8i',
+        title: 'Photovoltaic Array Mounts Completed & Inspected',
+        content: 'Our collective members completed the mounting frames for all 12 solar panels on the press facility roof. Local certified electricians confirmed zero-loss grounding. Once final escrow funding arrives, we take delivery of the cold-press extraction unit.',
+        imageUrl: '/images/borrowers/fatima-zahra.jpg',
+        timestamp: Date.now() - 1000 * 60 * 60 * 28, // 28 hours ago
+        category: 'equipment',
+        txHash: '4xQ9v...sol'
+      },
+      {
+        id: 'upd-morocco-2',
+        authorName: 'Fatima Zahra',
+        authorRole: 'Cooperative President',
+        authorAddress: '7XwK1tPzR9x8M2cT6g4hL5vB7nJ3mK9pQ2wE4rT6yU8i',
+        title: 'Supplier Contract Locked at Wholesale Discount',
+        content: 'Signed formal purchase agreement with the Casablanca food-grade machinery distributor, saving $240 off the original retail quote. The savings will fund extra reusable stainless olive transport crates for the harvest!',
+        timestamp: Date.now() - 1000 * 60 * 60 * 96, // 4 days ago
+        category: 'financial'
+      }
+    ]
   },
   {
     id: 'guatemala-weaving-collective',
@@ -71,6 +117,7 @@ const RAW_INITIAL_LOANS: LoanRequest[] = [
     lendersCount: 38,
     termsMonths: 8,
     interestRate: 0,
+    borrowerAddress: '9LmK4pQ2wE4rT6yU8i7XwK1tPzR9x8M2cT6g4hL5vB7n',
     escrowAddress: '9LmK4pQ2wE4rT6yU8i7XwK1tPzR9x8M2cT6g4hL5vB7n',
     status: 'funding',
     repaymentSchedule: [
@@ -78,7 +125,31 @@ const RAW_INITIAL_LOANS: LoanRequest[] = [
       { month: 2, dueDate: '2026-10-30', amountUSD: 275, amountSOL: 1.89, status: 'upcoming' }
     ],
     createdAt: '2026-08-25',
-    featured: true
+    featured: true,
+    aiAudit: {
+      riskScore: 28,
+      riskLevel: 'MODERATE',
+      summary: 'Elena Rostova & K’iche’ Collective require looms and natural dye vats to bypass intermediary brokers and trade directly.',
+      borrowerAssessment: 'Authentic Maya artisan tradition. Clear cost breakdown for cypress timber and copper dye cauldrons.',
+      walletAudit: {
+        address: '9LmK4pQ2wE4rT6yU8i7XwK1tPzR9x8M2cT6g4hL5vB7n',
+        isNewWallet: true,
+        walletAgeDays: 11,
+        transactionCount: 2,
+        solBalance: 0.12,
+        irregularitiesDetected: [
+          'Relatively new wallet address (11 days old).',
+          'Only 2 prior setup transactions recorded on ledger.'
+        ],
+        findings: [
+          { type: 'warning', title: 'New Wallet Address', detail: 'Wallet was generated 11 days ago. Standard pattern for first-time Web3 artisans.' },
+          { type: 'info', title: 'Low Initial Balance', detail: 'Minimal gas reserve (0.12 SOL) on-chain.' }
+        ]
+      },
+      recommendation: 'Legitimate artisan cooperative with a newer wallet profile. Release funds according to lumber purchase milestone proof.',
+      auditedAt: '2026-09-05T09:15:00Z',
+      modelUsed: 'Google Gemini 1.5 Flash'
+    }
   },
   {
     id: 'ghana-solar-refrigeration',
