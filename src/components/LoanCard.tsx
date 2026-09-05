@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { LoanRequest } from '../lib/types';
 import LendModal from './LendModal';
+import { getStore, subscribeStore, getUserLentToLoan } from '../lib/store';
 import { 
   Users, 
   Clock, 
   ArrowRight,
-  CheckCircle
+  CheckCircle,
+  Check
 } from '@phosphor-icons/react';
 
 interface LoanCardProps {
@@ -14,10 +16,18 @@ interface LoanCardProps {
 
 export default function LoanCard({ loan }: LoanCardProps) {
   const [showModal, setShowModal] = useState(false);
+  const [store, setStore] = useState(getStore());
 
-  const percentFunded = Math.min(100, Math.round((loan.raisedUSD / loan.goalUSD) * 100));
-  const remainingUSD = Math.max(0, loan.goalUSD - loan.raisedUSD);
-  const isFullyFunded = loan.raisedUSD >= loan.goalUSD;
+  useEffect(() => {
+    return subscribeStore(() => setStore({ ...getStore() }));
+  }, []);
+
+  const currentLoan = store.loans.find(l => l.id === loan.id) || loan;
+  const percentFunded = Math.min(100, Math.round((currentLoan.raisedUSD / currentLoan.goalUSD) * 100));
+  const remainingUSD = Math.max(0, currentLoan.goalUSD - currentLoan.raisedUSD);
+  const isFullyFunded = currentLoan.raisedUSD >= currentLoan.goalUSD;
+
+  const { hasLended, totalLentUSD } = getUserLentToLoan(currentLoan.id, store.wallet.address);
 
   return (
     <>
@@ -28,6 +38,10 @@ export default function LoanCard({ loan }: LoanCardProps) {
           <img 
             src={loan.borrowerAvatar} 
             alt={loan.borrowerName}
+            width={400}
+            height={208}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-200"
           />
 
@@ -110,12 +124,18 @@ export default function LoanCard({ loan }: LoanCardProps) {
           <div className="pt-2 flex items-center justify-between">
             <div className="flex items-center space-x-1.5 text-xs text-slate-400">
               <Users size={16} className="text-indigo-400" />
-              <span>{loan.lendersCount} lenders</span>
+              <span>{currentLoan.lendersCount} lenders</span>
+              {hasLended && (
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-700/50 flex items-center gap-0.5">
+                  <Check size={10} weight="bold" />
+                  <span>You lent ${totalLentUSD}</span>
+                </span>
+              )}
             </div>
 
             <div className="flex items-center space-x-2">
               <a
-                href={`/loan/${loan.id}`}
+                href={`/loan/${currentLoan.id}`}
                 className="py-2.5 px-3 text-slate-300 hover:text-white rounded-xl hover:bg-slate-800 text-xs transition-colors font-medium min-h-[44px] flex items-center justify-center"
               >
                 Story
@@ -136,7 +156,7 @@ export default function LoanCard({ loan }: LoanCardProps) {
                   </>
                 ) : (
                   <>
-                    <span>Lend SOL</span>
+                    <span>{hasLended ? 'Lend More' : 'Lend SOL'}</span>
                     <ArrowRight size={15} weight="bold" />
                   </>
                 )}
@@ -149,7 +169,7 @@ export default function LoanCard({ loan }: LoanCardProps) {
 
       {showModal && (
         <LendModal
-          loan={loan}
+          loan={currentLoan}
           onClose={() => setShowModal(false)}
         />
       )}

@@ -5,8 +5,10 @@ import { ArrowSquareOut, Clock, ShieldCheck } from '@phosphor-icons/react';
 
 export default function TransactionFeed() {
   const [store, setStore] = useState(getStore());
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     return subscribeStore(() => {
       setStore({ ...getStore() });
     });
@@ -64,7 +66,7 @@ export default function TransactionFeed() {
                 </div>
                 <div className="text-[10px] text-slate-500 flex items-center justify-end space-x-1">
                   <Clock size={12} />
-                  <span>{timeAgo(tx.timestamp)}</span>
+                  <span suppressHydrationWarning>{isMounted ? timeAgo(tx.timestamp) : 'Recently'}</span>
                 </div>
               </div>
 

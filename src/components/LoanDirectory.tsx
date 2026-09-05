@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { LoanRequest, LoanCategory } from '../lib/types';
 import { getStore, subscribeStore } from '../lib/store';
 import LoanCard from './LoanCard';
+import { LoanSkeletonGrid } from './LoanSkeleton';
 import { MagnifyingGlass, Faders } from '@phosphor-icons/react';
 
 export default function LoanDirectory() {
@@ -9,8 +10,10 @@ export default function LoanDirectory() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'featured' | 'progress' | 'recent'>('featured');
+  const [isClientReady, setIsClientReady] = useState(false);
 
   useEffect(() => {
+    setIsClientReady(true);
     return subscribeStore(() => {
       setStore({ ...getStore() });
     });
@@ -98,8 +101,10 @@ export default function LoanDirectory() {
         ))}
       </div>
 
-      {/* Loans Grid */}
-      {sortedLoans.length > 0 ? (
+      {/* Loans Grid or Skeleton */}
+      {!isClientReady && store.loans.length === 0 ? (
+        <LoanSkeletonGrid count={6} />
+      ) : sortedLoans.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedLoans.map((loan) => (
             <LoanCard key={loan.id} loan={loan} />

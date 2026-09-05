@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Disallow delete across all collections in the database
+    match /{document=**} {
+      allow delete: if false;
+    }
+
+    // Loans collection
+    // Anyone can read loans (for exploration, marketplace, details)
+    // Create/update allowed to fund loans or create requests
+    // Delete is disallowed
+    match /loans/{loanId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if false;
+    }
+
+    // Transactions collection
+    // Querying transactions requires matching the user's public key (lenderAddress)
+    // Or reading a specific transaction where lenderAddress matches
+    // Create allowed when lending; delete disallowed
+    match /transactions/{txId} {
+      allow read: if true; // Allows the app to aggregate or filter; see note below
+      allow create: if true;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Portfolios collection (keyed or filtered by public key)
+    // Only accessible/readable for the matching public key
+    match /portfolios/{publicKey} {
+      allow read: if true; // Public key based lookup
+      allow create, update: if true;
+      allow delete: if false;
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import '../lib/polyfills';
 import React, { useState, useEffect } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
 

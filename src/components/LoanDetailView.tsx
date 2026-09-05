@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { LoanRequest } from '../lib/types';
-import { getStore, subscribeStore } from '../lib/store';
+import { getStore, subscribeStore, getUserLentToLoan } from '../lib/store';
 import { formatAddress, getSolanaExplorerUrl } from '../lib/solana';
 import { deriveLoanEscrowInfo } from '../lib/escrowProgram';
 import LendModal from './LendModal';
@@ -14,7 +14,8 @@ import {
   CaretLeft, 
   ArrowRight, 
   TrendUp,
-  Info
+  Info,
+  Check
 } from '@phosphor-icons/react';
 
 interface LoanDetailViewProps {
@@ -35,6 +36,8 @@ export default function LoanDetailView({ initialLoanId }: LoanDetailViewProps) {
   const percentFunded = Math.min(100, Math.round((loan.raisedUSD / loan.goalUSD) * 100));
   const remainingUSD = Math.max(0, loan.goalUSD - loan.raisedUSD);
   const isFullyFunded = loan.raisedUSD >= loan.goalUSD;
+
+  const { hasLended, totalLentUSD, totalLentSOL } = getUserLentToLoan(loan.id, store.wallet.address);
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-20 lg:pb-0">
@@ -196,13 +199,20 @@ export default function LoanDetailView({ initialLoanId }: LoanDetailViewProps) {
 
             {/* Quick Action CTA */}
             <div className="space-y-3">
+              {hasLended && (
+                <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center space-x-2 text-xs text-emerald-300 font-mono">
+                  <Check size={14} weight="bold" className="text-emerald-400 flex-shrink-0" />
+                  <span>You already funded ${totalLentUSD} ({totalLentSOL} SOL) to this project</span>
+                </div>
+              )}
+
               <button
                 onClick={() => setShowModal(true)}
                 disabled={isFullyFunded}
                 className="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center space-x-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
               >
                 <Coins size={18} weight="bold" />
-                <span>{isFullyFunded ? 'Fully Funded' : 'Lend to this Initiative'}</span>
+                <span>{isFullyFunded ? 'Fully Funded' : (hasLended ? 'Lend More' : 'Lend to this Initiative')}</span>
                 {!isFullyFunded && <ArrowRight size={16} weight="bold" />}
               </button>
 

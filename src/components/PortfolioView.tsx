@@ -175,9 +175,41 @@ export default function PortfolioView() {
 
       {/* My Loan Contributions Ledger */}
       <section className="rounded-2xl bg-[#0e1526] border border-slate-800 p-4 sm:p-6 space-y-4">
-        <h3 className="text-lg font-bold text-white font-['Syne']">Personal Lending Ledger</h3>
-        <div className="space-y-3">
-          {store.transactions.map((tx) => (
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-white font-['Syne']">Personal Lending Ledger</h3>
+          {store.wallet.address && (
+            <span className="text-xs font-mono text-indigo-400">
+              {formatAddress(store.wallet.address, 4)}
+            </span>
+          )}
+        </div>
+
+        {(() => {
+          const userTransactions = store.wallet.address
+            ? store.transactions.filter(
+                (tx) => tx.lenderAddress && tx.lenderAddress.toLowerCase() === store.wallet.address.toLowerCase()
+              )
+            : [];
+
+          if (!store.wallet.address) {
+            return (
+              <div className="p-8 text-center rounded-xl bg-[#090e1a] border border-[#172554] text-slate-400 text-xs">
+                Connect your Solana wallet to view your personal portfolio contributions.
+              </div>
+            );
+          }
+
+          if (userTransactions.length === 0) {
+            return (
+              <div className="p-8 text-center rounded-xl bg-[#090e1a] border border-[#172554] text-slate-400 text-xs">
+                No loans backed yet with wallet <span className="font-mono text-indigo-300">{formatAddress(store.wallet.address, 4)}</span>. Explore initiatives to make your first contribution!
+              </div>
+            );
+          }
+
+          return (
+            <div className="space-y-3">
+              {userTransactions.map((tx) => (
             <div
               key={tx.id}
               className="p-4 rounded-xl bg-[#090e1a] border border-[#172554] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
@@ -211,7 +243,9 @@ export default function PortfolioView() {
               </div>
             </div>
           ))}
-        </div>
+            </div>
+          );
+        })()}
       </section>
 
     </div>

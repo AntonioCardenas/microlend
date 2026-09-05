@@ -1,8 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { LoanRequest, LenderBadge } from '../lib/types';
 import { SOL_USD_RATE } from '../lib/loansData';
-import { getStore, lendToLoan } from '../lib/store';
-import { executeLendTransaction, getSolanaExplorerUrl, formatAddress } from '../lib/solana';
+import { 
+  getStore, 
+  subscribeStore, 
+  lendToLoan, 
+  connectDemoWallet, 
+  updateConnectedWallet, 
+  airdropToWallet,
+  getUserLentToLoan 
+} from '../lib/store';
+import { 
+  executeLendTransaction, 
+  getSolanaExplorerUrl, 
+  formatAddress, 
+  fetchSolBalance 
+} from '../lib/solana';
 import PrivySolanaProvider from './PrivySolanaProvider';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets, useSignMessage, useCreateWallet } from '@privy-io/react-auth/solana';
@@ -21,7 +34,10 @@ import {
   Certificate,
   Key,
   Lightning,
-  Check
+  Check,
+  Wallet,
+  PlusCircle,
+  Drop
 } from '@phosphor-icons/react';
 
 interface LendModalProps {
@@ -31,10 +47,11 @@ interface LendModalProps {
 }
 
 function LendModalContent({ loan, onClose, onSuccess }: LendModalProps) {
-  const store = getStore();
+  const [store, setStore] = useState(getStore());
   const [amountUSD, setAmountUSD] = useState<number>(25);
   const [memoMessage, setMemoMessage] = useState<string>('Capital deployed in support of sustainable community enterprise.');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingWallet, setIsCreatingWallet] = useState(false);
   const [txResult, setTxResult] = useState<{
     txHash: string;
     isRealOnChain: boolean;
@@ -43,24 +60,21 @@ function LendModalContent({ loan, onClose, onSuccess }: LendModalProps) {
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Subscribe to reactive store
+  useEffect(() => {
+    return subscribeStore(() => setStore({ ...getStore() }));
+  }, []);
+
   // Privy Solana hooks
-  let privyAuth: { login?: () => void; authenticated?: boolean } = {};
+  let privyAuth: { login?: () => void; authenticated?: boolean; user?: any } = {};
   let privyWallets: { wallets?: any[] } = {};
   let privySign: { signMessage?: any } = {};
-  let privyCreate: { createWallet?: any } = {};
+  let privyCreate: { createWallet?: () => Promise<any> } = {};
 
-  try {
-    privyAuth = usePrivy();
-  } catch {}
-  try {
-    privyWallets = useWallets();
-  } catch {}
-  try {
-    privySign = useSignMessage();
-  } catch {}
-  try {
-    privyCreate = useCreateWallet();
-  } catch {}
+  try { privyAuth = usePrivy(); } catch {}
+  try { privyWallets = useWallets(); } catch {}
+  try { privySign = useSignMessage(); } catch {}
+  try { privyCreate = useCreateWallet(); } catch {}
 
   const { login, authenticated } = privyAuth;
   const { wallets } = privyWallets;
@@ -69,15 +83,76 @@ function LendModalContent({ loan, onClose, onSuccess }: LendModalProps) {
 
   const connectedSolanaWallet = wallets && wallets.length > 0 ? wallets[0] : null;
 
+  // Active connected account
+  const activeAddress = connectedSolanaWallet?.address || (store.wallet.connected ? store.wallet.address : null);
+  const isConnected = Boolean(activeAddress);
+  const isDemoWallet = Boolean(store.wallet.connected && store.wallet.isDemoWallet && !connectedSolanaWallet);
+
+  // Sync Privy wallet address and live balance to store
+  useEffect(() => {
+    if (connectedSolanaWallet?.address) {
+      updateConnectedWallet({ address: connectedSolanaWallet.address, providerType: 'privy' });
+      fetchSolBalance(connectedSolanaWallet.address).then((bal) => {
+        updateConnectedWallet({
+          address: connectedSolanaWallet.address,
+          providerType: 'privy',
+          balanceSOL: bal
+        });
+      });
+    }
+  }, [connectedSolanaWallet?.address]);
+
+  // Refresh balance if connected
+  useEffect(() => {
+    if (activeAddress && !isDemoWallet) {
+      fetchSolBalance(activeAddress).then((bal) => {
+        updateConnectedWallet({ address: activeAddress, balanceSOL: bal });
+      });
+    }
+  }, [activeAddress, isDemoWallet]);
+
   const amountSOL = Number((amountUSD / SOL_USD_RATE).toFixed(3));
   const remainingUSD = Math.max(0, loan.goalUSD - loan.raisedUSD);
+  const currentBalanceSOL = store.wallet.balanceSOL;
+  const hasSufficientBalance = isConnected && currentBalanceSOL >= amountSOL;
+
+  const { hasLended, totalLentUSD, totalLentSOL } = getUserLentToLoan(loan.id, activeAddress || undefined);
 
   const presetAmounts = [10, 25, 50, 100];
 
+  const handleConnectDemo = () => {
+    connectDemoWallet();
+    setErrorMessage(null);
+  };
+
+  const handleCreateSolanaWallet = async () => {
+    if (!createWallet) return;
+    try {
+      setIsCreatingWallet(true);
+      const newWallet = await createWallet();
+      if (newWallet?.address) {
+        updateConnectedWallet({ address: newWallet.address, providerType: 'privy' });
+      }
+    } catch (err: any) {
+      setErrorMessage(`Failed to create Solana wallet: ${err?.message || err}`);
+    } finally {
+      setIsCreatingWallet(false);
+    }
+  };
+
   const handleLend = async () => {
-    if (amountUSD <= 0) return;
-    if (store.wallet.balanceSOL < amountSOL) {
-      setErrorMessage(`Insufficient SOL balance (${store.wallet.balanceSOL.toFixed(2)} SOL). Use the faucet in the navigation bar to request +1 Devnet SOL.`);
+    if (!isConnected || !activeAddress) {
+      setErrorMessage('No account connected. Please connect your wallet or use a demo account first.');
+      return;
+    }
+
+    if (amountUSD <= 0) {
+      setErrorMessage('Please select or enter an amount greater than 0.');
+      return;
+    }
+
+    if (currentBalanceSOL < amountSOL) {
+      setErrorMessage(`Insufficient SOL balance (${currentBalanceSOL.toFixed(3)} SOL). You need at least ${amountSOL} SOL.`);
       return;
     }
 
@@ -114,7 +189,7 @@ function LendModalContent({ loan, onClose, onSuccess }: LendModalProps) {
           console.warn('Privy message signing failed or cancelled, using devnet fallback:', privyErr);
           // Fall back to devnet execution if user cancels or testing offline
           const result = await executeLendTransaction({
-            fromAddress: connectedSolanaWallet.address || store.wallet.address,
+            fromAddress: activeAddress,
             toEscrowAddress: loan.escrowAddress,
             amountSOL,
             loanId: loan.id,
@@ -123,9 +198,9 @@ function LendModalContent({ loan, onClose, onSuccess }: LendModalProps) {
           finalSignature = result.signature;
         }
       } else {
-        // Devnet Keypair direct transaction
+        // Direct Devnet transaction via local demo keypair
         const result = await executeLendTransaction({
-          fromAddress: store.wallet.address,
+          fromAddress: activeAddress,
           toEscrowAddress: loan.escrowAddress,
           amountSOL,
           loanId: loan.id,
@@ -134,13 +209,13 @@ function LendModalContent({ loan, onClose, onSuccess }: LendModalProps) {
         finalSignature = result.signature;
       }
 
-      const { newBadges } = lendToLoan({
+      const { newBadges } = await lendToLoan({
         loanId: loan.id,
         amountSOL,
         amountUSD,
         message: memoMessage,
         txHash: finalSignature,
-        lenderAddress: connectedSolanaWallet?.address || store.wallet.address
+        lenderAddress: activeAddress
       });
 
       confetti({
@@ -159,26 +234,31 @@ function LendModalContent({ loan, onClose, onSuccess }: LendModalProps) {
 
       if (onSuccess) onSuccess();
     } catch (err: any) {
-      console.error(err);
-      setErrorMessage(err.message || 'Transaction failed. Please try again.');
+      setErrorMessage(err.message || 'Transaction could not be submitted to Solana.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#080c16]/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-[#0e1526] border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92dvh] flex flex-col">
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#080c16]/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div 
+        className="w-full max-w-lg bg-[#0e1526] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-[#090e1a] flex-shrink-0">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-950 border border-indigo-700/50 flex items-center justify-center text-indigo-400 flex-shrink-0">
-              <Coins size={20} weight="bold" />
+        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+              <Coins size={18} weight="bold" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-white font-['Syne']">Lend with Solana</h3>
-              <p className="text-[11px] sm:text-xs text-slate-400">Direct zero-interest capital to borrower escrow</p>
+              <h3 className="text-sm sm:text-base font-bold text-white font-['Syne']">
+                {hasLended ? 'Lend More with Solana' : 'Lend with Solana'}
+              </h3>
+              <p className="text-[11px] sm:text-xs text-slate-400">
+                {hasLended ? `Add to your previous $${totalLentUSD} commitment` : 'Direct zero-interest capital to borrower escrow'}
+              </p>
             </div>
           </div>
           <button
@@ -209,34 +289,99 @@ function LendModalContent({ loan, onClose, onSuccess }: LendModalProps) {
               </div>
             </div>
 
-            {/* Privy Solana Wallet State & Connector */}
-            <div className="p-3 rounded-xl bg-[#090e1a] border border-slate-800 flex items-center justify-between gap-2">
-              <div className="flex items-center space-x-2.5 min-w-0">
-                <Key size={18} className="text-indigo-400 flex-shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-white flex items-center space-x-1.5">
-                    <span className="truncate">Signer:</span>
-                    <span className="font-mono text-indigo-300 truncate">
-                      {formatAddress(connectedSolanaWallet?.address || store.wallet.address, 4)}
+            {/* Account Detection & Connection Card */}
+            {isConnected ? (
+              <div className="p-3.5 rounded-xl bg-[#090e1a] border border-emerald-500/30">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center space-x-2.5 min-w-0">
+                    <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
                     </span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-white flex items-center space-x-1.5 flex-wrap gap-y-1">
+                        <span>Signer:</span>
+                        <span className="font-mono text-emerald-300 truncate">
+                          {formatAddress(activeAddress, 4)}
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/40 font-mono">
+                          {connectedSolanaWallet ? 'Privy' : (isDemoWallet ? 'Demo Devnet' : 'Connected')}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                        Balance: <strong className="text-indigo-300">{currentBalanceSOL.toFixed(3)} SOL</strong> (~${(currentBalanceSOL * SOL_USD_RATE).toFixed(2)})
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                    {connectedSolanaWallet ? 'Privy Solana Wallet Connected' : 'Instant Solana Devnet Keypair'}
-                  </div>
+
+                  {login && (
+                    <button
+                      type="button"
+                      onClick={() => login()}
+                      className="px-2.5 py-1 rounded-lg text-indigo-400 hover:text-indigo-300 hover:bg-slate-800 text-xs font-medium transition-colors cursor-pointer flex-shrink-0"
+                    >
+                      Switch
+                    </button>
+                  )}
                 </div>
               </div>
-
-              {!connectedSolanaWallet && login && (
+            ) : authenticated && !connectedSolanaWallet ? (
+              /* Privy Authenticated but No Solana Wallet */
+              <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 space-y-2.5">
+                <div className="flex items-center space-x-2 text-indigo-300 text-xs font-semibold">
+                  <Key size={16} />
+                  <span>Privy Signed In — Solana Wallet Needed</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Your account is signed in, but needs an embedded Solana wallet to sign zero-interest loan transactions.
+                </p>
                 <button
                   type="button"
-                  onClick={() => login()}
-                  className="px-3 py-2 rounded-lg bg-indigo-950 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 hover:text-white text-xs font-medium flex items-center space-x-1 transition-colors cursor-pointer min-h-[38px] flex-shrink-0"
+                  onClick={handleCreateSolanaWallet}
+                  disabled={isCreatingWallet}
+                  className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center space-x-2 cursor-pointer transition-colors shadow-sm min-h-[40px]"
                 >
-                  <Lightning size={14} weight="fill" />
-                  <span>Use Privy</span>
+                  <PlusCircle size={15} weight="bold" />
+                  <span>{isCreatingWallet ? 'Creating Wallet…' : 'Create Solana Wallet in 1-Click'}</span>
                 </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              /* Not Connected State */
+              <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-amber-300 text-xs font-bold">
+                    <WarningCircle size={16} weight="fill" className="text-amber-400 flex-shrink-0" />
+                    <span>No Account Connected</span>
+                  </div>
+                  <span className="text-[10px] text-amber-300/80 font-mono uppercase tracking-wider bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-700/40">
+                    Required
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Connect your wallet to sign on Solana, or use an instant pre-funded Devnet demo account:
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {login ? (
+                    <button
+                      type="button"
+                      onClick={() => login()}
+                      className="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 cursor-pointer shadow-sm transition-colors min-h-[42px]"
+                    >
+                      <Lightning size={15} weight="fill" />
+                      <span>Connect Privy</span>
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleConnectDemo}
+                    className="py-2.5 px-3 rounded-xl bg-[#090e1a] hover:bg-slate-800 text-slate-200 hover:text-white font-semibold text-xs flex items-center justify-center space-x-1.5 border border-slate-700 cursor-pointer transition-colors min-h-[42px]"
+                  >
+                    <Wallet size={15} />
+                    <span>Use Demo Wallet</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Amount Selection */}
             <div>
@@ -325,25 +470,92 @@ function LendModalContent({ loan, onClose, onSuccess }: LendModalProps) {
               </div>
             )}
 
-            {/* Solid Indigo Action Button */}
-            <button
-              type="button"
-              onClick={handleLend}
-              disabled={isSubmitting || amountUSD <= 0}
-              className="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center space-x-2 shadow-sm disabled:opacity-50 transition-all cursor-pointer min-h-[48px]"
-            >
-              {isSubmitting ? (
-                <>
-                  <CircleNotch size={18} className="animate-spin text-white" />
-                  <span>Signing & Broadcasting on Solana...</span>
-                </>
-              ) : (
-                <>
-                  <PaperPlaneTilt size={18} weight="bold" />
-                  <span>Confirm Loan: ${amountUSD} ({amountSOL} SOL)</span>
-                </>
-              )}
-            </button>
+            {/* Primary Action Section */}
+            {!isConnected ? (
+              /* Prompt user to connect first */
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (login) login();
+                    else handleConnectDemo();
+                  }}
+                  className="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center space-x-2 shadow-sm transition-all cursor-pointer min-h-[48px]"
+                >
+                  <Lightning size={18} weight="fill" />
+                  <span>Connect Account to Lend</span>
+                </button>
+                <p className="text-[11px] text-center text-slate-400">
+                  Or{' '}
+                  <button
+                    type="button"
+                    onClick={handleConnectDemo}
+                    className="text-indigo-400 hover:underline cursor-pointer font-semibold"
+                  >
+                    click here to try with a Demo Devnet Account
+                  </button>
+                </p>
+              </div>
+            ) : !hasSufficientBalance ? (
+              /* Insufficient Balance State with Quick Faucet */
+              <div className="space-y-3">
+                <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-600/40 text-xs text-amber-200 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="font-bold block text-amber-300">Insufficient Devnet SOL</span>
+                    <span className="text-[11px] text-amber-200/80">
+                      You have {currentBalanceSOL.toFixed(3)} SOL, but this loan requires {amountSOL} SOL.
+                    </span>
+                  </div>
+                  {isDemoWallet ? (
+                    <button
+                      type="button"
+                      onClick={() => airdropToWallet(1.0)}
+                      className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center space-x-1 cursor-pointer flex-shrink-0"
+                    >
+                      <Drop size={14} weight="fill" />
+                      <span>+1 Demo SOL</span>
+                    </button>
+                  ) : (
+                    <a
+                      href="https://faucet.solana.com/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center space-x-1 cursor-pointer flex-shrink-0"
+                    >
+                      <span>Devnet Faucet ↗</span>
+                    </a>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  disabled
+                  className="w-full py-3.5 px-4 rounded-xl bg-slate-800 text-slate-500 font-bold text-sm flex items-center justify-center space-x-2 cursor-not-allowed min-h-[48px]"
+                >
+                  <span>Need {amountSOL} SOL to Confirm</span>
+                </button>
+              </div>
+            ) : (
+              /* Ready to Confirm */
+              <button
+                type="button"
+                onClick={handleLend}
+                disabled={isSubmitting || amountUSD <= 0}
+                className="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center space-x-2 shadow-sm disabled:opacity-50 transition-all cursor-pointer min-h-[48px]"
+              >
+                {isSubmitting ? (
+                  <>
+                    <CircleNotch size={18} className="animate-spin text-white" />
+                    <span>Signing & Broadcasting on Solana...</span>
+                  </>
+                ) : (
+                  <>
+                    <PaperPlaneTilt size={18} weight="bold" />
+                    <span>{hasLended ? `Confirm Additional Loan: $${amountUSD} (${amountSOL} SOL)` : `Confirm Loan: $${amountUSD} (${amountSOL} SOL)`}</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         ) : (
           /* Confirmation State */

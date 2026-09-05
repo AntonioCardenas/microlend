@@ -1,8 +1,10 @@
 ---
+import '../lib/polyfills';
 import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer.astro';
+import AppLoader from '../components/AppLoader';
 
 interface Props {
   title?: string;
@@ -31,6 +33,9 @@ const {
     <ClientRouter />
   </head>
   <body class="min-h-screen flex flex-col bg-[#080c16] text-slate-100 antialiased selection:bg-indigo-600/40 selection:text-white">
+
+    <!-- Non-blocking App Loader for instant FCP navigation/hydration indicator -->
+    <AppLoader client:load />
 
     <!-- Interactive Navbar Island -->
     <Navbar client:load transition:persist />
