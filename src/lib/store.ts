@@ -28,8 +28,8 @@ let storeListeners: Array<() => void> = [];
 export function getInitialStore(): LendingChainStore {
   let loans = INITIAL_LOANS;
   let transactions = INITIAL_TRANSACTIONS;
-  let address = 'DemoDevnetWallet...';
-  let balanceSOL = 4.5;
+  let address = '';
+  let balanceSOL = 0;
 
   if (typeof window !== 'undefined') {
     try {
@@ -50,10 +50,6 @@ export function getInitialStore(): LendingChainStore {
 
       const storedTxs = localStorage.getItem(STORAGE_KEY_TRANSACTIONS);
       if (storedTxs) transactions = JSON.parse(storedTxs);
-
-
-      const demoKp = getOrCreateDemoKeypair();
-      address = demoKp.publicKey.toBase58();
 
       // Ensure initial seed runs asynchronously if needed
       seedFirestoreIfEmpty(db).catch(console.error);
@@ -87,31 +83,23 @@ export function getInitialStore(): LendingChainStore {
   }
 
 
-  // Calculate portfolio and badges based on transactions for this user
-  const userTxs = transactions.filter(t => t.lenderAddress === address || t.lenderAddress.startsWith('4Z3') || t.lenderAddress.includes('Demo'));
-  const totalLentUSD = userTxs.reduce((acc, t) => acc + t.amountUSD, 125.75);
-  const totalLentSOL = Number((totalLentUSD / SOL_USD_RATE).toFixed(3));
-
-  const badges = BADGE_DEFINITIONS.map(badge => {
-    const isUnlocked = totalLentUSD >= badge.thresholdUSD;
-    return {
-      ...badge,
-      unlocked: isUnlocked,
-      unlockedAt: isUnlocked ? '2026-09-05' : undefined
-    };
-  });
-
+  // Calculate empty portfolio since disconnected by default
   const portfolio: UserPortfolio = {
-    address,
-    totalLentUSD: Number(totalLentUSD.toFixed(2)),
-    totalLentSOL,
-    activeLoansCount: 3,
-    repaidLoansCount: 1,
-    totalRepaidUSD: 33.3,
-    availableToRelendUSD: 33.3,
-    impactScore: Math.round(totalLentUSD * 1.8),
-    badgesUnlocked: badges.filter(b => b.unlocked).map(b => b.tier)
+    address: '',
+    totalLentUSD: 0,
+    totalLentSOL: 0,
+    activeLoansCount: 0,
+    repaidLoansCount: 0,
+    totalRepaidUSD: 0,
+    availableToRelendUSD: 0,
+    impactScore: 0,
+    badgesUnlocked: []
   };
+
+  const badges = BADGE_DEFINITIONS.map(badge => ({
+    ...badge,
+    unlocked: false
+  }));
 
   return {
     loans,
@@ -119,18 +107,34 @@ export function getInitialStore(): LendingChainStore {
     portfolio,
     badges,
     wallet: {
-      address,
-      balanceSOL,
-      balanceUSD: Number((balanceSOL * SOL_USD_RATE).toFixed(2)),
-      isDemoWallet: true,
-      connected: true
+      address: '',
+      balanceSOL: 0,
+      balanceUSD: 0,
+      isDemoWallet: false,
+      connected: false
     }
   };
 }
 
 function recalculatePortfolio(address: string) {
-  const userTxs = currentStore.transactions.filter(t => t.lenderAddress === address || t.lenderAddress.startsWith('4Z3') || t.lenderAddress.includes('Demo'));
-  const totalLentUSD = userTxs.reduce((acc, t) => acc + t.amountUSD, 125.75);
+  if (!address) {
+    currentStore.portfolio = {
+      address: '',
+      totalLentUSD: 0,
+      totalLentSOL: 0,
+      activeLoansCount: 0,
+      repaidLoansCount: 0,
+      totalRepaidUSD: 0,
+      availableToRelendUSD: 0,
+      impactScore: 0,
+      badgesUnlocked: []
+    };
+    currentStore.badges = BADGE_DEFINITIONS.map(b => ({ ...b, unlocked: false }));
+    return;
+  }
+
+  const userTxs = currentStore.transactions.filter(t => t.lenderAddress === address);
+  const totalLentUSD = userTxs.reduce((acc, t) => acc + t.amountUSD, 0);
   const totalLentSOL = Number((totalLentUSD / SOL_USD_RATE).toFixed(3));
 
   const badges = BADGE_DEFINITIONS.map(badge => {
@@ -146,10 +150,10 @@ function recalculatePortfolio(address: string) {
     address,
     totalLentUSD: Number(totalLentUSD.toFixed(2)),
     totalLentSOL,
-    activeLoansCount: 3,
-    repaidLoansCount: 1,
-    totalRepaidUSD: 33.3,
-    availableToRelendUSD: 33.3,
+    activeLoansCount: Array.from(new Set(userTxs.map(t => t.loanId))).length,
+    repaidLoansCount: 0,
+    totalRepaidUSD: 0,
+    availableToRelendUSD: 0,
     impactScore: Math.round(totalLentUSD * 1.8),
     badgesUnlocked: badges.filter(b => b.unlocked).map(b => b.tier)
   };
@@ -298,10 +302,26 @@ export function updateConnectedWallet({
       balanceUSD: Number((newBalance * SOL_USD_RATE).toFixed(2))
     }
   };
+  recalculatePortfolio(address);
   notifyStoreChange();
 }
 
-export function resetToDemoWallet() {
+export function disconnectWallet() {
+  currentStore = {
+    ...currentStore,
+    wallet: {
+      address: '',
+      balanceSOL: 0,
+      balanceUSD: 0,
+      isDemoWallet: false,
+      connected: false
+    }
+  };
+  recalculatePortfolio('');
+  notifyStoreChange();
+}
+
+export function connectDemoWallet() {
   const demoKp = getOrCreateDemoKeypair();
   const address = demoKp.publicKey.toBase58();
   currentStore = {
@@ -314,6 +334,7 @@ export function resetToDemoWallet() {
       connected: true
     }
   };
+  recalculatePortfolio(address);
   notifyStoreChange();
 }
 

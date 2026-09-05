@@ -1,4 +1,5 @@
 ---
+import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer.astro';
@@ -27,11 +28,12 @@ const {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+    <ClientRouter />
   </head>
   <body class="min-h-screen flex flex-col bg-[#080c16] text-slate-100 antialiased selection:bg-indigo-600/40 selection:text-white">
 
     <!-- Interactive Navbar Island -->
-    <Navbar client:load />
+    <Navbar client:load transition:persist />
 
     <!-- Main Page Content -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">

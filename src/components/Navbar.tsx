@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getStore, subscribeStore, airdropToWallet, updateConnectedWallet, resetToDemoWallet } from '../lib/store';
-import { formatAddress, requestDevnetAirdrop } from '../lib/solana';
+import { getStore, subscribeStore, airdropToWallet, updateConnectedWallet, disconnectWallet, connectDemoWallet } from '../lib/store';
+import { formatAddress, fetchSolBalance } from '../lib/solana';
 import PrivySolanaProvider from './PrivySolanaProvider';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets, useCreateWallet } from '@privy-io/react-auth/solana';
@@ -51,6 +51,9 @@ function NavbarContent() {
   useEffect(() => {
     if (activePrivySolanaWallet?.address) {
       updateConnectedWallet({ address: activePrivySolanaWallet.address, providerType: 'privy' });
+      fetchSolBalance(activePrivySolanaWallet.address).then(balance => {
+        updateConnectedWallet({ address: activePrivySolanaWallet.address, providerType: 'privy', balanceSOL: balance });
+      });
     }
   }, [activePrivySolanaWallet?.address]);
 
@@ -66,11 +69,8 @@ function NavbarContent() {
     }
   };
 
-  const handleDevnetAirdrop = async () => {
-    setAirdropping(true);
-    airdropToWallet(1.0);
-    if (store.wallet.address) await requestDevnetAirdrop(store.wallet.address, 1.0);
-    setTimeout(() => setAirdropping(false), 800);
+  const handleDevnetAirdrop = () => {
+    window.open('https://faucet.solana.com/', '_blank');
   };
 
   const handleCreateSolanaWallet = async () => {
@@ -90,7 +90,7 @@ function NavbarContent() {
 
   const handleDisconnect = async () => {
     if (logout) { try { await logout(); } catch (e) { console.warn(e); } }
-    resetToDemoWallet();
+    disconnectWallet();
     setShowWalletMenu(false);
   };
 
@@ -155,21 +155,28 @@ function NavbarContent() {
               className="flex items-center gap-2 px-3 sm:px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 transition-all cursor-pointer min-h-[44px] shadow-sm"
               aria-label="Open wallet menu"
             >
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${activePrivySolanaWallet ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
-              <div className="text-left">
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${store.wallet.connected ? (activePrivySolanaWallet ? 'bg-emerald-400' : 'bg-indigo-400') : 'bg-slate-600'}`} />
+              {store.wallet.connected ? (
+                <div className="text-left">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-mono font-medium text-slate-300">
+                      {formatAddress(store.wallet.address, 3)}
+                    </span>
+                    <CaretDown size={11} className="text-slate-500" />
+                  </div>
+                  <div className="text-[10px] sm:text-[11px] text-indigo-400 font-mono font-semibold flex items-center gap-1">
+                    <span>{store.wallet.balanceSOL.toFixed(2)} SOL</span>
+                    {activePrivySolanaWallet && (
+                      <span className="text-[8px] px-1 bg-indigo-950 text-indigo-300 rounded border border-indigo-700/50">Privy</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
                 <div className="flex items-center gap-1">
-                  <span className="text-xs font-mono font-medium text-slate-300">
-                    {formatAddress(store.wallet.address, 3)}
-                  </span>
+                  <span className="text-xs font-semibold text-slate-300">Connect Wallet</span>
                   <CaretDown size={11} className="text-slate-500" />
                 </div>
-                <div className="text-[10px] sm:text-[11px] text-indigo-400 font-mono font-semibold flex items-center gap-1">
-                  <span>{store.wallet.balanceSOL.toFixed(2)} SOL</span>
-                  {activePrivySolanaWallet && (
-                    <span className="text-[8px] px-1 bg-indigo-950 text-indigo-300 rounded border border-indigo-700/50">Privy</span>
-                  )}
-                </div>
-              </div>
+              )}
             </button>
 
             {/* Mobile backdrop */}
@@ -187,7 +194,7 @@ function NavbarContent() {
                   <div className="flex items-center gap-2">
                     <Wallet size={15} className="text-indigo-400" />
                     <span className="text-xs font-bold text-white font-['Syne']">
-                      {activePrivySolanaWallet ? 'Privy Solana Wallet' : 'Devnet Keypair'}
+                      {store.wallet.connected ? (activePrivySolanaWallet ? 'Privy Solana Wallet' : 'Wallet Connected') : 'Connect Wallet'}
                     </span>
                   </div>
                   <span className="text-[10px] px-2 py-0.5 rounded bg-slate-900 text-indigo-300 border border-indigo-500/30 font-mono">
@@ -195,86 +202,99 @@ function NavbarContent() {
                   </span>
                 </div>
 
-                <div className="my-3 p-3 rounded-xl bg-[#090e1a] border border-[#172554]">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider">Public Key</p>
-                    {activePrivySolanaWallet ? (
-                      <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
-                        <Check size={11} />Privy Connected
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-indigo-300 font-mono">Local Devnet Keypair</span>
+                {store.wallet.connected ? (
+                  <>
+                    <div className="my-3 p-3 rounded-xl bg-[#090e1a] border border-[#172554]">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider">Public Key</p>
+                        {activePrivySolanaWallet ? (
+                          <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                            <Check size={11} />Privy Connected
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-indigo-300 font-mono">Connected</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-mono text-slate-300 truncate max-w-[180px]">{store.wallet.address}</span>
+                        <button
+                          onClick={handleCopy}
+                          className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors cursor-pointer text-xs min-h-[32px] min-w-[32px] flex items-center justify-center"
+                        >
+                          {copied ? <Check size={13} className="text-emerald-400" /> : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-xs py-1 text-slate-300">
+                        <span>Balance:</span>
+                        <span className="font-mono font-bold text-indigo-400">
+                          {store.wallet.balanceSOL.toFixed(3)} SOL (${store.wallet.balanceUSD})
+                        </span>
+                      </div>
+
+                      {authenticated && !activePrivySolanaWallet && createWallet && (
+                        <MagneticButton
+                          onClick={handleCreateSolanaWallet}
+                          disabled={isCreatingWallet}
+                          className="w-full py-3 px-3 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer min-h-[44px]"
+                        >
+                          <PlusCircle size={15} weight="bold" />
+                          <span>{isCreatingWallet ? 'Creating…' : 'Create Privy Solana Wallet'}</span>
+                        </MagneticButton>
+                      )}
+
+                      <MagneticButton
+                        onClick={handleDevnetAirdrop}
+                        className="w-full py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-700 min-h-[44px]"
+                      >
+                        <Drop size={15} weight="fill" className="text-indigo-400" />
+                        <span>Request +1 Devnet SOL Faucet</span>
+                      </MagneticButton>
+
+                      <a
+                        href={`https://explorer.solana.com/address/${store.wallet.address}?cluster=devnet`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full py-2.5 px-3 rounded-lg text-slate-400 hover:text-white text-xs flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-colors min-h-[40px]"
+                      >
+                        <span>Inspect on Solana Explorer</span>
+                        <ArrowSquareOut size={13} />
+                      </a>
+
+                      <MagneticButton
+                        onClick={handleDisconnect}
+                        className="w-full py-2.5 px-3 rounded-lg text-rose-400 hover:text-rose-300 text-xs flex items-center justify-center gap-1.5 hover:bg-slate-800/80 transition-colors cursor-pointer min-h-[40px]"
+                      >
+                        <SignOut size={13} />
+                        <span>Disconnect Wallet</span>
+                      </MagneticButton>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-xs text-slate-400 text-center mb-4">Connect your wallet to participate in micro-lending on the Solana blockchain.</p>
+                    
+                    {!authenticated && login && (
+                      <MagneticButton
+                        onClick={() => { login(); setShowWalletMenu(false); }}
+                        className="w-full py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer min-h-[44px]"
+                      >
+                        <Lightning size={15} weight="fill" />
+                        <span>Connect Wallet via Privy</span>
+                      </MagneticButton>
                     )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono text-slate-300 truncate max-w-[180px]">{store.wallet.address}</span>
-                    <button
-                      onClick={handleCopy}
-                      className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors cursor-pointer text-xs min-h-[32px] min-w-[32px] flex items-center justify-center"
-                    >
-                      {copied ? <Check size={13} className="text-emerald-400" /> : 'Copy'}
-                    </button>
-                  </div>
-                </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs py-1 text-slate-300">
-                    <span>Balance:</span>
-                    <span className="font-mono font-bold text-indigo-400">
-                      {store.wallet.balanceSOL.toFixed(3)} SOL (${store.wallet.balanceUSD})
-                    </span>
-                  </div>
-
-                  {!authenticated && login && (
                     <MagneticButton
-                      onClick={() => { login(); setShowWalletMenu(false); }}
-                      className="w-full py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer min-h-[44px]"
+                      onClick={() => { connectDemoWallet(); setShowWalletMenu(false); }}
+                      className="w-full py-3 px-3 rounded-xl bg-[#090e1a] border border-slate-700 hover:bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer min-h-[44px]"
                     >
-                      <Lightning size={15} weight="fill" />
-                      <span>Connect Wallet via Privy</span>
+                      <Wallet size={15} />
+                      <span>Continue with Demo Wallet</span>
                     </MagneticButton>
-                  )}
-
-                  {authenticated && !activePrivySolanaWallet && createWallet && (
-                    <MagneticButton
-                      onClick={handleCreateSolanaWallet}
-                      disabled={isCreatingWallet}
-                      className="w-full py-3 px-3 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer min-h-[44px]"
-                    >
-                      <PlusCircle size={15} weight="bold" />
-                      <span>{isCreatingWallet ? 'Creating…' : 'Create Privy Solana Wallet'}</span>
-                    </MagneticButton>
-                  )}
-
-                  <MagneticButton
-                    onClick={handleDevnetAirdrop}
-                    disabled={airdropping}
-                    className="w-full py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-700 min-h-[44px]"
-                  >
-                    <Drop size={15} weight="fill" className={`text-indigo-400 ${airdropping ? 'animate-spin' : ''}`} />
-                    <span>{airdropping ? 'Airdropping 1 SOL…' : 'Request +1 Devnet SOL Faucet'}</span>
-                  </MagneticButton>
-
-                  <a
-                    href={`https://explorer.solana.com/address/${store.wallet.address}?cluster=devnet`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full py-2.5 px-3 rounded-lg text-slate-400 hover:text-white text-xs flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-colors min-h-[40px]"
-                  >
-                    <span>Inspect on Solana Explorer</span>
-                    <ArrowSquareOut size={13} />
-                  </a>
-
-                  {authenticated && (
-                    <MagneticButton
-                      onClick={handleDisconnect}
-                      className="w-full py-2.5 px-3 rounded-lg text-rose-400 hover:text-rose-300 text-xs flex items-center justify-center gap-1.5 hover:bg-slate-800/80 transition-colors cursor-pointer min-h-[40px]"
-                    >
-                      <SignOut size={13} />
-                      <span>Disconnect Wallet</span>
-                    </MagneticButton>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
